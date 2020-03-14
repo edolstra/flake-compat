@@ -12,7 +12,7 @@ let
   lockFile = builtins.fromJSON (builtins.readFile (src + "/flake.lock"));
 
   fetchTree =
-    { info, inputs, original, locked }:
+    { info, locked, ... }:
     if locked.type == "github" then
       { outPath = fetchTarball "https://api.github.com/repos/${locked.owner}/${locked.repo}/tarball/${locked.rev}";
         rev = locked.rev;
@@ -28,7 +28,10 @@ let
     let
       flake = import (flakeSrc + "/flake.nix");
 
-      inputs = builtins.mapAttrs (n: v: callFlake (fetchTree v) v.inputs) locks;
+      inputs = builtins.mapAttrs (n: v:
+        if v.flake or true
+        then callFlake (fetchTree v) v.inputs
+        else fetchTree v) locks;
 
       outputs = flakeSrc // (flake.outputs (inputs // {self = outputs;}));
     in

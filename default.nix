@@ -5,7 +5,7 @@
 # containing 'defaultNix' (to be used in 'default.nix'), 'shellNix'
 # (to be used in 'shell.nix').
 
-{ src }:
+{ src, system ? builtins.currentSystem or "unknown-system" }:
 
 let
 
@@ -68,8 +68,6 @@ let
     in "${toString y'}${pad (toString m)}${pad (toString d)}${pad (toString hours)}${pad (toString minutes)}${pad (toString seconds)}";
 
   result = callFlake src' (lockFile.inputs);
-
-  system = builtins.currentSystem or "unknown-system";
 
 in
   assert lockFile.version == 4;

@@ -9,7 +9,9 @@
 
 let
 
-  lockFile = builtins.fromJSON (builtins.readFile (src + "/flake.lock"));
+  lockFilePath = src + "/flake.lock";
+
+  lockFile = builtins.fromJSON (builtins.readFile lockFilePath);
 
   fetchTree =
     { info, locked, ... }:
@@ -24,13 +26,13 @@ let
       # FIXME: add Git, Mercurial, tarball inputs.
       throw "flake input has unsupported input type '${locked.type}'";
 
-  callFlake = flakeSrc: locks:
+  callFlake4 = flakeSrc: locks:
     let
       flake = import (flakeSrc + "/flake.nix");
 
       inputs = builtins.mapAttrs (n: v:
         if v.flake or true
-        then callFlake (fetchTree v) v.inputs
+        then callFlake4 (fetchTree v) v.inputs
         else fetchTree v) locks;
 
       outputs = flakeSrc // (flake.outputs (inputs // {self = outputs;}));
@@ -67,11 +69,34 @@ let
       pad = s: if builtins.stringLength s < 2 then "0" + s else s;
     in "${toString y'}${pad (toString m)}${pad (toString d)}${pad (toString hours)}${pad (toString minutes)}${pad (toString seconds)}";
 
-  result = callFlake src' (lockFile.inputs);
+  allNodes =
+    builtins.mapAttrs
+      (key: node:
+        let
+          sourceInfo = if key == lockFile.root then src' else fetchTree { info = node.info; locked = (removeAttrs node.locked ["dir"]); };
+          subdir = if key == lockFile.root then "" else node.locked.dir or "";
+          flake = import (sourceInfo + (if subdir != "" then "/" else "") + subdir + "/flake.nix");
+          inputs = builtins.mapAttrs (inputName: key: allNodes.${key}) (node.inputs or {});
+          outputs = flake.outputs (inputs // { self = result; });
+          result = outputs // sourceInfo // { inherit inputs; inherit outputs; inherit sourceInfo; };
+        in
+          if node.flake or true then
+            assert flake.edition or flake.epoch or 0 == 201909;
+            assert builtins.isFunction flake.outputs;
+            result
+          else
+            sourceInfo
+      )
+      lockFile.nodes;
+
+  result =
+    if lockFile.version == 4
+    then callFlake4 src' (lockFile.inputs)
+    else if lockFile.version == 5
+    then allNodes.${lockFile.root}
+    else throw "lock file '${lockFilePath}' has unsupported version ${toString lockFile.version}";
 
 in
-  assert lockFile.version == 4;
-
   rec {
     defaultNix =
       result

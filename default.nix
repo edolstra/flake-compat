@@ -19,7 +19,8 @@ let
       { outPath = fetchTarball "https://api.github.com/repos/${locked.owner}/${locked.repo}/tarball/${locked.rev}";
         rev = locked.rev;
         shortRev = builtins.substring 0 7 locked.rev;
-        lastModified = formatSecondsSinceEpoch info.lastModified;
+        lastModified = info.lastModified;
+        lastModifiedDate = formatSecondsSinceEpoch info.lastModified;
         narHash = info.narHash;
       }
     else
@@ -42,7 +43,7 @@ let
 
   src' =
     (if src ? outPath then src else { outPath = src; })
-    // { lastModified = formatSecondsSinceEpoch 0; };
+    // { lastModified = 0; lastModifiedDate = formatSecondsSinceEpoch 0; };
 
   # Format number of seconds in the Unix epoch as %Y%m%d%H%M%S.
   formatSecondsSinceEpoch = t:
@@ -81,7 +82,6 @@ let
           result = outputs // sourceInfo // { inherit inputs; inherit outputs; inherit sourceInfo; };
         in
           if node.flake or true then
-            assert flake.edition or flake.epoch or 0 == 201909;
             assert builtins.isFunction flake.outputs;
             result
           else

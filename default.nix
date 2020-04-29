@@ -23,8 +23,21 @@ let
         lastModifiedDate = formatSecondsSinceEpoch info.lastModified;
         narHash = info.narHash;
       }
+    else if locked.type == "git" then
+      { outPath =
+          builtins.fetchGit
+            ({ url = locked.url; }
+             // (if locked ? rev then { inherit (locked) rev; } else {})
+             // (if locked ? ref then { inherit (locked) ref; } else {})
+            );
+        rev = locked.rev;
+        shortRev = builtins.substring 0 7 locked.rev;
+        lastModified = info.lastModified;
+        lastModifiedDate = formatSecondsSinceEpoch info.lastModified;
+        narHash = info.narHash;
+      }
     else
-      # FIXME: add Git, Mercurial, tarball inputs.
+      # FIXME: add Mercurial, tarball inputs.
       throw "flake input has unsupported input type '${locked.type}'";
 
   callFlake4 = flakeSrc: locks:

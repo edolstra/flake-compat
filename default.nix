@@ -26,6 +26,7 @@ let
         lastModified = info.lastModified;
         lastModifiedDate = formatSecondsSinceEpoch info.lastModified;
         narHash = info.narHash;
+        __toString = self: self.outPath;
       }
     else if locked.type == "git" then
       { outPath =
@@ -39,6 +40,7 @@ let
         lastModified = info.lastModified;
         lastModifiedDate = formatSecondsSinceEpoch info.lastModified;
         narHash = info.narHash;
+        __toString = self: self.outPath;
       }
     else
       # FIXME: add Mercurial, tarball inputs.

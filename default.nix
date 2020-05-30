@@ -114,12 +114,4 @@ let
     else throw "lock file '${lockFilePath}' has unsupported version ${toString lockFile.version}";
 
 in
-  rec {
-    defaultNix =
-      result
-      // (if result ? defaultPackage.${system} then { default = result.defaultPackage.${system}; } else {});
-
-    shellNix =
-      defaultNix
-      // (if result ? devShell.${system} then { default = result.devShell.${system}; } else {});
-  }
+result

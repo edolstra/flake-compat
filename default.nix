@@ -16,7 +16,11 @@ let
   fetchTree =
     { info, locked, ... }:
     if locked.type == "github" then
-      { outPath = fetchTarball "https://api.github.com/repos/${locked.owner}/${locked.repo}/tarball/${locked.rev}";
+      {
+        outPath = fetchTarball {
+          url = "https://api.github.com/repos/${locked.owner}/${locked.repo}/tarball/${locked.rev}";
+          sha256 = info.narHash;
+        };
         rev = locked.rev;
         shortRev = builtins.substring 0 7 locked.rev;
         lastModified = info.lastModified;

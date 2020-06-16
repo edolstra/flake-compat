@@ -54,8 +54,19 @@ let
       assert flake.edition == 201909;
       outputs;
 
-  src' =
-    (if src ? outPath then src else { outPath = src; })
+  src' = let
+    dir = builtins.readDir src;
+    gitDir = builtins.readDir (src + "/.git");
+    isGitDir = dir ? ".git" && dir.".git" == "directory";
+    isNotShallow = ! gitDir ? "shallow";
+    # Try to clean the source tree by using fetchGit, if this source
+    # tree is a valid git repository.
+    tryFetchGit = src:
+      if isGitDir && isNotShallow
+      then builtins.fetchGit src
+      else { outPath = src; };
+  in
+    (if src ? outPath then src else tryFetchGit src)
     // { lastModified = 0; lastModifiedDate = formatSecondsSinceEpoch 0; };
 
   # Format number of seconds in the Unix epoch as %Y%m%d%H%M%S.

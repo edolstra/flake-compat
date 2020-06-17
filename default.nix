@@ -1,4 +1,4 @@
-# Compatability function to allow flakes to be used by
+# Compatibility function to allow flakes to be used by
 # non-flake-enabled Nix versions. Given a source tree containing a
 # 'flake.nix' and 'flake.lock' file, it fetches the flake inputs and
 # calls the flake's 'outputs' function. It then returns an attrset
@@ -14,31 +14,31 @@ let
   lockFile = builtins.fromJSON (builtins.readFile lockFilePath);
 
   fetchTree =
-    { info, locked, ... }:
-    if locked.type == "github" then
-      { outPath = fetchTarball "https://api.github.com/repos/${locked.owner}/${locked.repo}/tarball/${locked.rev}";
-        rev = locked.rev;
-        shortRev = builtins.substring 0 7 locked.rev;
+    info:
+    if info.type == "github" then
+      { outPath = fetchTarball "https://api.github.com/repos/${info.owner}/${info.repo}/tarball/${info.rev}";
+        rev = info.rev;
+        shortRev = builtins.substring 0 7 info.rev;
         lastModified = info.lastModified;
         lastModifiedDate = formatSecondsSinceEpoch info.lastModified;
         narHash = info.narHash;
       }
-    else if locked.type == "git" then
+    else if info.type == "git" then
       { outPath =
           builtins.fetchGit
-            ({ url = locked.url; }
-             // (if locked ? rev then { inherit (locked) rev; } else {})
-             // (if locked ? ref then { inherit (locked) ref; } else {})
+            ({ url = info.url; }
+             // (if info ? rev then { inherit (info) rev; } else {})
+             // (if info ? ref then { inherit (info) ref; } else {})
             );
-        rev = locked.rev;
-        shortRev = builtins.substring 0 7 locked.rev;
+        rev = info.rev;
+        shortRev = builtins.substring 0 7 info.rev;
         lastModified = info.lastModified;
         lastModifiedDate = formatSecondsSinceEpoch info.lastModified;
         narHash = info.narHash;
       }
     else
       # FIXME: add Mercurial, tarball inputs.
-      throw "flake input has unsupported input type '${locked.type}'";
+      throw "flake input has unsupported input type '${info.type}'";
 
   callFlake4 = flakeSrc: locks:
     let
@@ -46,15 +46,15 @@ let
 
       inputs = builtins.mapAttrs (n: v:
         if v.flake or true
-        then callFlake4 (fetchTree v) v.inputs
-        else fetchTree v) locks;
+        then callFlake4 (fetchTree (v.locked // v.info)) v.inputs
+        else fetchTree (v.locked // v.info)) locks;
 
       outputs = flakeSrc // (flake.outputs (inputs // {self = outputs;}));
     in
       assert flake.edition == 201909;
       outputs;
 
-  src' = let
+  rootSrc = let
     dir = builtins.readDir src;
     gitDir = builtins.readDir (src + "/.git");
     isGitDir = dir ? ".git" && dir.".git" == "directory";
@@ -99,11 +99,40 @@ let
     builtins.mapAttrs
       (key: node:
         let
-          sourceInfo = if key == lockFile.root then src' else fetchTree { info = node.info; locked = (removeAttrs node.locked ["dir"]); };
+          sourceInfo =
+            if key == lockFile.root
+            then rootSrc
+            else fetchTree (node.info or {} // removeAttrs node.locked ["dir"]);
+
           subdir = if key == lockFile.root then "" else node.locked.dir or "";
+
           flake = import (sourceInfo + (if subdir != "" then "/" else "") + subdir + "/flake.nix");
-          inputs = builtins.mapAttrs (inputName: key: allNodes.${key}) (node.inputs or {});
+
+          inputs = builtins.mapAttrs
+            (inputName: inputSpec: allNodes.${resolveInput inputSpec})
+            (node.inputs or {});
+
+          # Resolve a input spec into a node name. An input spec is
+          # either a node name, or a 'follows' path from the root
+          # node.
+          resolveInput = inputSpec:
+              if builtins.isList inputSpec
+              then getInputByPath lockFile.root inputSpec
+              else inputSpec;
+
+          # Follow an input path (e.g. ["dwarffs" "nixpkgs"]) from the
+          # root node, returning the final node.
+          getInputByPath = nodeName: path:
+            if path == []
+            then nodeName
+            else
+              getInputByPath
+                # Since this could be a 'follows' input, call resolveInput.
+                (resolveInput lockFile.nodes.${nodeName}.inputs.${builtins.head path})
+                (builtins.tail path);
+
           outputs = flake.outputs (inputs // { self = result; });
+
           result = outputs // sourceInfo // { inherit inputs; inherit outputs; inherit sourceInfo; };
         in
           if node.flake or true then
@@ -116,8 +145,8 @@ let
 
   result =
     if lockFile.version == 4
-    then callFlake4 src' (lockFile.inputs)
-    else if lockFile.version == 5
+    then callFlake4 rootSrc (lockFile.inputs)
+    else if lockFile.version >= 5 && lockFile.version <= 7
     then allNodes.${lockFile.root}
     else throw "lock file '${lockFilePath}' has unsupported version ${toString lockFile.version}";
 

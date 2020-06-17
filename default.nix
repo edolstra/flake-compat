@@ -58,13 +58,14 @@ let
     dir = builtins.readDir src;
     gitDir = builtins.readDir (src + "/.git");
     isGitDir = dir ? ".git" && dir.".git" == "directory";
-    isNotShallow = ! gitDir ? "shallow";
+    isShallow = gitDir ? "shallow";
     # Try to clean the source tree by using fetchGit, if this source
     # tree is a valid git repository.
     tryFetchGit = src:
-      if isGitDir && isNotShallow
+      if isGitDir && !isShallow
       then builtins.fetchGit src
       else { outPath = src; };
+
   in
     (if src ? outPath then src else tryFetchGit src)
     // { lastModified = 0; lastModifiedDate = formatSecondsSinceEpoch 0; };

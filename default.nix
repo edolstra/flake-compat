@@ -54,6 +54,12 @@ let
       assert flake.edition == 201909;
       outputs;
 
+  callLocklessFlake = flakeSrc:
+    let
+      flake = import (flakeSrc + "/flake.nix");
+      outputs = flakeSrc // (flake.outputs ({ self = outputs; }));
+    in outputs;
+
   rootSrc = let
     dir = builtins.readDir src;
     gitDir = builtins.readDir (src + "/.git");
@@ -144,7 +150,9 @@ let
       lockFile.nodes;
 
   result =
-    if lockFile.version == 4
+    if !(builtins.pathExists lockFilePath)
+    then callLocklessFlake rootSrc
+    else if lockFile.version == 4
     then callFlake4 rootSrc (lockFile.inputs)
     else if lockFile.version >= 5 && lockFile.version <= 7
     then allNodes.${lockFile.root}

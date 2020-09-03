@@ -36,6 +36,10 @@ let
         lastModifiedDate = formatSecondsSinceEpoch info.lastModified;
         narHash = info.narHash;
       }
+    else if info.type == "path" then
+      { outPath = builtins.path { path = info.path; };
+        narHash = info.narHash;
+      }
     else
       # FIXME: add Mercurial, tarball inputs.
       throw "flake input has unsupported input type '${info.type}'";

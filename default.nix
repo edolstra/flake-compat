@@ -40,6 +40,10 @@ let
       { outPath = builtins.path { path = info.path; };
         narHash = info.narHash;
       }
+    else if info.type == "tarball" then
+      { outPath = fetchTarball info.url;
+        narHash = info.narHash;
+      }
     else
       # FIXME: add Mercurial, tarball inputs.
       throw "flake input has unsupported input type '${info.type}'";

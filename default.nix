@@ -16,7 +16,7 @@ let
   fetchTree =
     info:
     if info.type == "github" then
-      { outPath = fetchTarball "https://api.github.com/repos/${info.owner}/${info.repo}/tarball/${info.rev}";
+      { outPath = fetchTarball "https://api.${info.url or "github.com"}/repos/${info.owner}/${info.repo}/tarball/${info.rev}";
         rev = info.rev;
         shortRev = builtins.substring 0 7 info.rev;
         lastModified = info.lastModified;
@@ -43,6 +43,11 @@ let
     else if info.type == "tarball" then
       { outPath = fetchTarball info.url;
         narHash = info.narHash;
+      }
+    else if info.type == "gitlab" then
+      { inherit (info) rev narHash lastModified;
+        outPath = fetchTarball "https://${info.url or "gitlab.com"}/${info.owner}/${info.repo}/-/archive/${info.rev}/${info.repo}-${info.rev}.tar.gz";
+        shortRev = builtins.substring 0 7 info.rev;
       }
     else
       # FIXME: add Mercurial, tarball inputs.

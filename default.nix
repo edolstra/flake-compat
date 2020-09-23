@@ -16,7 +16,7 @@ let
   fetchTree =
     info:
     if info.type == "github" then
-      { outPath = fetchTarball "https://api.${info.url or "github.com"}/repos/${info.owner}/${info.repo}/tarball/${info.rev}";
+      { outPath = fetchTarball "https://api.${info.host or "github.com"}/repos/${info.owner}/${info.repo}/tarball/${info.rev}";
         rev = info.rev;
         shortRev = builtins.substring 0 7 info.rev;
         lastModified = info.lastModified;
@@ -46,7 +46,7 @@ let
       }
     else if info.type == "gitlab" then
       { inherit (info) rev narHash lastModified;
-        outPath = fetchTarball "https://${info.url or "gitlab.com"}/${info.owner}/${info.repo}/-/archive/${info.rev}/${info.repo}-${info.rev}.tar.gz";
+        outPath = fetchTarball "https://${info.host or "gitlab.com"}/api/v4/projects/${info.owner}%2F${info.repo}/repository/archive.tar.gz?sha=${info.rev}";
         shortRev = builtins.substring 0 7 info.rev;
       }
     else

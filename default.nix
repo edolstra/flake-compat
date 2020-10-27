@@ -74,16 +74,15 @@ let
     in outputs;
 
   rootSrc = let
-    dir = builtins.readDir src;
-    gitDir = builtins.readDir (src + "/.git");
-    isGitDir = dir ? ".git" && dir.".git" == "directory";
-    isShallow = gitDir ? "shallow";
     # Try to clean the source tree by using fetchGit, if this source
     # tree is a valid git repository.
     tryFetchGit = src:
-      if isGitDir && !isShallow
+      if isGit && !isShallow
       then builtins.fetchGit src
       else { outPath = src; };
+    # NB git worktrees have a file for .git, so we don't check the type of .git
+    isGit = builtins.pathExists (src + "/.git");
+    isShallow = builtins.pathExists (src + "/.git/shallow");
 
   in
     (if src ? outPath then src else tryFetchGit src)

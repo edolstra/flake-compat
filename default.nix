@@ -89,8 +89,8 @@ let
     isShallow = builtins.pathExists (src + "/.git/shallow");
 
   in
-    (if src ? outPath then src else tryFetchGit src)
-    // { lastModified = 0; lastModifiedDate = formatSecondsSinceEpoch 0; };
+    { lastModified = 0; lastModifiedDate = formatSecondsSinceEpoch 0; }
+      // (if src ? outPath then src else tryFetchGit src);
 
   # Format number of seconds in the Unix epoch as %Y%m%d%H%M%S.
   formatSecondsSinceEpoch = t:

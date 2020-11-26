@@ -30,12 +30,14 @@ let
              // (if info ? rev then { inherit (info) rev; } else {})
              // (if info ? ref then { inherit (info) ref; } else {})
             );
-        rev = info.rev;
-        shortRev = builtins.substring 0 7 info.rev;
         lastModified = info.lastModified;
         lastModifiedDate = formatSecondsSinceEpoch info.lastModified;
         narHash = info.narHash;
-      }
+      } // (if info ? rev then {
+        rev = info.rev;
+        shortRev = builtins.substring 0 7 info.rev;
+      } else {
+      })
     else if info.type == "path" then
       { outPath = builtins.path { path = info.path; };
         narHash = info.narHash;
@@ -78,7 +80,9 @@ let
     # tree is a valid git repository.
     tryFetchGit = src:
       if isGit && !isShallow
-      then builtins.fetchGit src
+      then
+        let res = builtins.fetchGit src;
+        in if res.rev == "0000000000000000000000000000000000000000" then removeAttrs res ["rev" "shortRev"]  else res
       else { outPath = src; };
     # NB git worktrees have a file for .git, so we don't check the type of .git
     isGit = builtins.pathExists (src + "/.git");

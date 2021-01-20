@@ -39,7 +39,10 @@ let
       } else {
       })
     else if info.type == "path" then
-      { outPath = builtins.path { path = info.path; };
+      { outPath = builtins.path {
+          path = if builtins.substring 0 2 info.path == "./"
+            then src + builtins.substring 1 (-1) info.path
+            else info.path; };
         narHash = info.narHash;
       }
     else if info.type == "tarball" then

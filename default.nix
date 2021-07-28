@@ -18,7 +18,7 @@ let
     if info.type == "github" then
       { outPath =
           (pkgs.fetchzip or fetchTarball)
-            ({ url = "https://api.${info.host or "github.com"}/repos/${info.owner}/${info.repo}/tarball/${info.rev}"; }
+            ({ url = "https://${info.host or "github.com"}/${info.owner}/${info.repo}/archive/${info.rev}.tar.gz"; }
              // (if info ? narHash then { sha256 = info.narHash; } else {})
             );
         rev = info.rev;

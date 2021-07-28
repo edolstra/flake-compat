@@ -5,7 +5,7 @@
 # containing 'defaultNix' (to be used in 'default.nix'), 'shellNix'
 # (to be used in 'shell.nix').
 
-{ src, system ? builtins.currentSystem or "unknown-system" }:
+{ src, pkgs ? {}, system ? builtins.currentSystem or "unknown-system" }:
 
 let
 
@@ -17,7 +17,7 @@ let
     info:
     if info.type == "github" then
       { outPath =
-          fetchTarball
+          (pkgs.fetchzip or fetchTarball)
             ({ url = "https://api.${info.host or "github.com"}/repos/${info.owner}/${info.repo}/tarball/${info.rev}"; }
              // (if info ? narHash then { sha256 = info.narHash; } else {})
             );
@@ -29,10 +29,11 @@ let
       }
     else if info.type == "git" then
       { outPath =
-          builtins.fetchGit
+          (pkgs.fetchgit or builtins.fetchGit)
             ({ url = info.url; }
              // (if info ? rev then { inherit (info) rev; } else {})
              // (if info ? ref then { inherit (info) ref; } else {})
+             // (if info ? narHash then { sha256 = info.narHash; } else {})
             );
         lastModified = info.lastModified;
         lastModifiedDate = formatSecondsSinceEpoch info.lastModified;
@@ -48,7 +49,7 @@ let
       }
     else if info.type == "tarball" then
       { outPath =
-          fetchTarball
+          (pkgs.fetchzip or fetchTarball)
             ({ inherit (info) url; }
              // (if info ? narHash then { sha256 = info.narHash; } else {})
             );
@@ -56,7 +57,7 @@ let
     else if info.type == "gitlab" then
       { inherit (info) rev narHash lastModified;
         outPath =
-          fetchTarball
+          (pkgs.fetchzip or fetchTarball)
             ({ url = "https://${info.host or "gitlab.com"}/api/v4/projects/${info.owner}%2F${info.repo}/repository/archive.tar.gz?sha=${info.rev}"; }
              // (if info ? narHash then { sha256 = info.narHash; } else {})
             );

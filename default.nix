@@ -46,6 +46,13 @@ let
       { outPath = builtins.path { path = info.path; };
         narHash = info.narHash;
       }
+    else if info.type == "tarball" then
+      { outPath =
+          fetchTarball
+            ({ inherit (info) url; }
+             // (if info ? narHash then { sha256 = info.narHash; } else {})
+            );
+      }
     else if info.type == "gitlab" then
       { inherit (info) rev narHash lastModified;
         outPath =

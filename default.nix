@@ -194,4 +194,6 @@ in
     shellNix =
       defaultNix
       // (if result ? devShell.${system} then { default = result.devShell.${system}; } else {});
+
+    inherit result;
   }

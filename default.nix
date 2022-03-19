@@ -33,6 +33,7 @@ let
             ({ url = info.url; }
              // (if info ? rev then { inherit (info) rev; } else {})
              // (if info ? ref then { inherit (info) ref; } else {})
+             // (if info ? submodules then { inherit (info) submodules; } else {})
             );
         lastModified = info.lastModified;
         lastModifiedDate = formatSecondsSinceEpoch info.lastModified;

@@ -189,9 +189,11 @@ in
   rec {
     defaultNix =
       result
-      // (if result ? defaultPackage.${system} then { default = result.defaultPackage.${system}; } else {});
+      // (if result ? defaultPackage.${system} then { default = result.defaultPackage.${system}; } else {})
+      // (if result ? packages.${system}.default then { default = result.packages.${system}.default; } else {});
 
     shellNix =
       defaultNix
-      // (if result ? devShell.${system} then { default = result.devShell.${system}; } else {});
+      // (if result ? devShell.${system} then { default = result.devShell.${system}; } else {})
+      // (if result ? devShells.${system}.default then { default = result.devShells.${system}.default; } else {});
   }

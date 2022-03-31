@@ -5,7 +5,7 @@
 # containing 'defaultNix' (to be used in 'default.nix'), 'shellNix'
 # (to be used in 'shell.nix').
 
-{ src, system ? builtins.currentSystem or "unknown-system" }:
+{ src, system ? builtins.currentSystem or "unknown-system", moveSrcToStore ? true }:
 
 let
 
@@ -91,7 +91,7 @@ let
     # Try to clean the source tree by using fetchGit, if this source
     # tree is a valid git repository.
     tryFetchGit = src:
-      if isGit && !isShallow
+      if moveSrcToStore && isGit && !isShallow
       then
         let res = builtins.fetchGit src;
         in if res.rev == "0000000000000000000000000000000000000000" then removeAttrs res ["rev" "shortRev"]  else res

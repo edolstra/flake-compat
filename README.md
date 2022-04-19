@@ -6,7 +6,7 @@ To use, add the following to your `flake.nix`:
 
 ```nix
 inputs.flake-compat = {
-  url = github:edolstra/flake-compat;
+  url = "github:edolstra/flake-compat";
   flake = false;
 };
 ```

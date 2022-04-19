@@ -20,7 +20,7 @@ Example in a `flake.nix` file:
   inputs.nixpkgs.url = "nixpkgs/nixos-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
   inputs.flake-compat = {
-    url = github:edolstra/flake-compat;
+    url = "github:edolstra/flake-compat";
     flake = false;
   };
 

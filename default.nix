@@ -78,7 +78,10 @@ let
       } else {
       })
     else if info.type == "path" then
-      { outPath = builtins.path { path = info.path; };
+      { outPath = builtins.path
+          ({ path = info.path; }
+           // (if info ? narHash then { sha256 = info.narHash; } else {})
+          );
         narHash = info.narHash;
       }
     else if info.type == "tarball" then
@@ -105,9 +108,13 @@ let
           if builtins.substring 0 7 info.url == "http://" || builtins.substring 0 8 info.url == "https://" then
             fetchurl
               ({ inherit (info) url; }
-               // (if info ? narHash then { sha256 = info.narHash; } else {}))
+               // (if info ? narHash then { sha256 = info.narHash; } else {})
+              )
           else if builtins.substring 0 7 info.url == "file://" then
-            builtins.path { path = builtins.substring 7 (-1) info.url; }
+            builtins.path
+              ({ path = builtins.substring 7 (-1) info.url; }
+               // (if info ? narHash then { sha256 = info.narHash; } else {})
+              )
           else throw "can't support url scheme of flake input with url '${info.url}'";
         narHash = info.narHash;
       }

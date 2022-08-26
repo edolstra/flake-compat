@@ -83,10 +83,12 @@ let
       }
     else if info.type == "tarball" then
       { outPath =
-          fetchTarball
-            ({ inherit (info) url; }
-             // (if info ? narHash then { sha256 = info.narHash; } else {})
-            );
+          if builtins.substring 0 7 info.url == "http://" || builtins.substring 0 8 info.url == "https://" then
+            fetchTarball
+              ({ inherit (info) url; }
+               // (if info ? narHash then { sha256 = info.narHash; } else {})
+              )
+          else throw "can't support url scheme of flake input with url '${info.url}'";
         narHash = info.narHash;
       }
     else if info.type == "gitlab" then
@@ -99,13 +101,18 @@ let
         shortRev = builtins.substring 0 7 info.rev;
       }
     else if info.type == "file" then
-      { outPath = fetchurl
-          ({ inherit (info) url; }
-           // (if info ? narHash then { sha256 = info.narHash; } else {}));
+      { outPath =
+          if builtins.substring 0 7 info.url == "http://" || builtins.substring 0 8 info.url == "https://" then
+            fetchurl
+              ({ inherit (info) url; }
+               // (if info ? narHash then { sha256 = info.narHash; } else {}))
+          else if builtins.substring 0 7 info.url == "file://" then
+            builtins.path { path = builtins.substring 7 (-1) info.url; }
+          else throw "can't support url scheme of flake input with url '${info.url}'";
         narHash = info.narHash;
       }
     else
-      # FIXME: add Mercurial, tarball inputs.
+      # FIXME: add Mercurial input
       throw "flake input has unsupported input type '${info.type}'";
 
   callFlake4 = flakeSrc: locks:

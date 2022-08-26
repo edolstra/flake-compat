@@ -13,6 +13,40 @@ let
 
   lockFile = builtins.fromJSON (builtins.readFile lockFilePath);
 
+  # Using custom fetchurl function here so that we can specify outputHashMode.
+  # The hash we get from the lock file is using recursive ingestion even though
+  # it’s not unpacked. So builtins.fetchurl and import <nix/fetchurl.nix> are
+  # insufficient.
+  fetchurl = { url, sha256 }:
+    derivation {
+      builder = "builtin:fetchurl";
+
+      name = "source";
+      inherit url;
+
+      outputHash = sha256;
+      outputHashAlgo = "sha256";
+      outputHashMode = "recursive";
+      executable = false;
+      unpack = false;
+
+      system = "builtin";
+
+      # No need to double the amount of network traffic
+      preferLocalBuild = true;
+
+      impureEnvVars = [
+        # We borrow these environment variables from the caller to allow
+        # easy proxy configuration.  This is impure, but a fixed-output
+        # derivation like fetchurl is allowed to do so since its result is
+        # by definition pure.
+        "http_proxy" "https_proxy" "ftp_proxy" "all_proxy" "no_proxy"
+      ];
+
+      # To make "nix-prefetch-url" work.
+      urls = [ url ];
+    };
+
   fetchTree =
     info:
     if info.type == "github" then
@@ -53,6 +87,7 @@ let
             ({ inherit (info) url; }
              // (if info ? narHash then { sha256 = info.narHash; } else {})
             );
+        narHash = info.narHash;
       }
     else if info.type == "gitlab" then
       { inherit (info) rev narHash lastModified;
@@ -62,6 +97,12 @@ let
              // (if info ? narHash then { sha256 = info.narHash; } else {})
             );
         shortRev = builtins.substring 0 7 info.rev;
+      }
+    else if info.type == "file" then
+      { outPath = fetchurl
+          ({ inherit (info) url; }
+           // (if info ? narHash then { sha256 = info.narHash; } else {}));
+        narHash = info.narHash;
       }
     else
       # FIXME: add Mercurial, tarball inputs.

@@ -18,7 +18,8 @@ let
   # it’s not unpacked. So builtins.fetchurl and import <nix/fetchurl.nix> are
   # insufficient.
   fetchurl = { url, sha256 }:
-    derivation {
+    # need to hide the fact it’s a derivation so that the output is just a path
+    builtins.storePath (builtins.unsafeDiscardStringContext (derivation {
       builder = "builtin:fetchurl";
 
       name = "source";
@@ -45,7 +46,7 @@ let
 
       # To make "nix-prefetch-url" work.
       urls = [ url ];
-    };
+    }).outPath);
 
   fetchTree =
     info:
@@ -86,12 +87,10 @@ let
       }
     else if info.type == "tarball" then
       { outPath =
-          if builtins.substring 0 7 info.url == "http://" || builtins.substring 0 8 info.url == "https://" then
-            fetchTarball
-              ({ inherit (info) url; }
-               // (if info ? narHash then { sha256 = info.narHash; } else {})
-              )
-          else throw "can't support url scheme of flake input with url '${info.url}'";
+          fetchTarball
+            ({ inherit (info) url; }
+             // (if info ? narHash then { sha256 = info.narHash; } else {})
+            );
         narHash = info.narHash;
       }
     else if info.type == "gitlab" then

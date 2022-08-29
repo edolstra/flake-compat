@@ -17,9 +17,10 @@ let
   # The hash we get from the lock file is using recursive ingestion even though
   # it’s not unpacked. So builtins.fetchurl and import <nix/fetchurl.nix> are
   # insufficient.
+  # Note that this will be a derivation and not a path as fetchTarball is,
+  # causing the hash of this input to be different on flake and non-flake evaluation.
   fetchurl = { url, sha256 }:
-    # need to hide the fact it’s a derivation so that the output is just a path
-    builtins.storePath (builtins.unsafeDiscardStringContext (derivation {
+    derivation {
       builder = "builtin:fetchurl";
 
       name = "source";
@@ -46,7 +47,7 @@ let
 
       # To make "nix-prefetch-url" work.
       urls = [ url ];
-    }).outPath);
+    };
 
   fetchTree =
     info:

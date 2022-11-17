@@ -189,7 +189,7 @@ let
 in
   rec {
     defaultNix =
-      result
+      (builtins.removeAttrs result ["__functor"])
       // (if result ? defaultPackage.${system} then { default = result.defaultPackage.${system}; } else {})
       // (if result ? packages.${system}.default then { default = result.packages.${system}.default; } else {});
 

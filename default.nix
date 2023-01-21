@@ -13,6 +13,42 @@ let
 
   lockFile = builtins.fromJSON (builtins.readFile lockFilePath);
 
+  # Using custom fetchurl function here so that we can specify outputHashMode.
+  # The hash we get from the lock file is using recursive ingestion even though
+  # it’s not unpacked. So builtins.fetchurl and import <nix/fetchurl.nix> are
+  # insufficient.
+  # Note that this will be a derivation and not a path as fetchTarball is,
+  # causing the hash of this input to be different on flake and non-flake evaluation.
+  fetchurl = { url, sha256 }:
+    derivation {
+      builder = "builtin:fetchurl";
+
+      name = "source";
+      inherit url;
+
+      outputHash = sha256;
+      outputHashAlgo = "sha256";
+      outputHashMode = "recursive";
+      executable = false;
+      unpack = false;
+
+      system = "builtin";
+
+      # No need to double the amount of network traffic
+      preferLocalBuild = true;
+
+      impureEnvVars = [
+        # We borrow these environment variables from the caller to allow
+        # easy proxy configuration.  This is impure, but a fixed-output
+        # derivation like fetchurl is allowed to do so since its result is
+        # by definition pure.
+        "http_proxy" "https_proxy" "ftp_proxy" "all_proxy" "no_proxy"
+      ];
+
+      # To make "nix-prefetch-url" work.
+      urls = [ url ];
+    };
+
   fetchTree =
     info:
     if info.type == "github" then
@@ -44,7 +80,10 @@ let
       } else {
       })
     else if info.type == "path" then
-      { outPath = builtins.path { path = info.path; };
+      { outPath = builtins.path
+          ({ path = info.path; }
+           // (if info ? narHash then { sha256 = info.narHash; } else {})
+          );
         narHash = info.narHash;
       }
     else if info.type == "tarball" then
@@ -53,6 +92,7 @@ let
             ({ inherit (info) url; }
              // (if info ? narHash then { sha256 = info.narHash; } else {})
             );
+        narHash = info.narHash;
       }
     else if info.type == "gitlab" then
       { inherit (info) rev narHash lastModified;
@@ -63,8 +103,23 @@ let
             );
         shortRev = builtins.substring 0 7 info.rev;
       }
+    else if info.type == "file" then
+      { outPath =
+          if builtins.substring 0 7 info.url == "http://" || builtins.substring 0 8 info.url == "https://" then
+            fetchurl
+              ({ inherit (info) url; }
+               // (if info ? narHash then { sha256 = info.narHash; } else {})
+              )
+          else if builtins.substring 0 7 info.url == "file://" then
+            builtins.path
+              ({ path = builtins.substring 7 (-1) info.url; }
+               // (if info ? narHash then { sha256 = info.narHash; } else {})
+              )
+          else throw "can't support url scheme of flake input with url '${info.url}'";
+        narHash = info.narHash;
+      }
     else
-      # FIXME: add Mercurial, tarball inputs.
+      # FIXME: add Mercurial input
       throw "flake input has unsupported input type '${info.type}'";
 
   callFlake4 = flakeSrc: locks:

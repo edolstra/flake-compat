@@ -63,6 +63,15 @@ let
             );
         shortRev = builtins.substring 0 7 info.rev;
       }
+    else if info.type == "sourcehut" then
+      { inherit (info) rev narHash lastModified;
+        outPath =
+          fetchTarball
+            ({ url = "https://${info.host or "git.sr.ht"}/${info.owner}/${info.repo}/archive/${info.rev}.tar.gz"; }
+             // (if info ? narHash then { sha256 = info.narHash; } else {})
+            );
+        shortRev = builtins.substring 0 7 info.rev;
+      }
     else
       # FIXME: add Mercurial, tarball inputs.
       throw "flake input has unsupported input type '${info.type}'";

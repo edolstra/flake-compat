@@ -5,10 +5,9 @@
 # containing 'defaultNix' (to be used in 'default.nix'), 'shellNix'
 # (to be used in 'shell.nix').
 
-{ src, system ? builtins.currentSystem or "unknown-system" }:
+{ src, system ? builtins.currentSystem or "unknown-system", package ? "default", devShell ? "default" }:
 
 let
-
   lockFilePath = src + "/flake.lock";
 
   lockFile = builtins.fromJSON (builtins.readFile lockFilePath);
@@ -191,11 +190,9 @@ in
   rec {
     defaultNix =
       (builtins.removeAttrs result ["__functor"])
-      // (if result ? defaultPackage.${system} then { default = result.defaultPackage.${system}; } else {})
-      // (if result ? packages.${system}.default then { default = result.packages.${system}.default; } else {});
+      // (if result ? packages.${system}.${package} then { default = result.packages.${system}.${package}; } else {})
 
     shellNix =
       defaultNix
-      // (if result ? devShell.${system} then { default = result.devShell.${system}; } else {})
-      // (if result ? devShells.${system}.default then { default = result.devShells.${system}.default; } else {});
+      // (if result ? devShells.${system}.${devShell} then { default = result.devShells.${system}.${devShell}; } else {});
   }

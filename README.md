@@ -27,3 +27,22 @@ Afterwards, create a `default.nix` file containing the following:
 ```
 
 If you would like a `shell.nix` file, create one containing the above, replacing `defaultNix` with `shellNix`.
+
+
+## Call Parent Flake (second use)
+
+To use, add the following to your subflake's flake.nix:
+
+```nix
+{
+  inputs.flake-compat.url = "github:edolstra/flake-compat";
+}
+```
+
+Afterwards, you can use it to call a flake from anywhere, including a parent directory, as follows:
+
+```nix
+{
+  parent = flake-compat ../.;
+}
+```

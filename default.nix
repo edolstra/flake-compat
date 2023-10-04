@@ -104,7 +104,20 @@ let
       then
         let res = builtins.fetchGit src;
         in if res.rev == "0000000000000000000000000000000000000000" then removeAttrs res ["rev" "shortRev"]  else res
-      else { outPath = src; };
+      else {
+        outPath =
+          # Massage `src` into a store path.
+          if builtins.isPath src
+          then
+            if dirOf (toString src) == builtins.storeDir
+            then
+              # If it's already a store path, don't copy it again.
+              builtins.storePath src
+            else
+              "${src}"
+          else
+            src;
+      };
     # NB git worktrees have a file for .git, so we don't check the type of .git
     isGit = builtins.pathExists (src + "/.git");
     isShallow = builtins.pathExists (src + "/.git/shallow");
@@ -149,7 +162,7 @@ let
 
           subdir = if key == lockFile.root then "" else node.locked.dir or "";
 
-          outPath = (builtins.storePath sourceInfo) + ((if subdir == "" then "" else "/") + subdir);
+          outPath = sourceInfo + ((if subdir == "" then "" else "/") + subdir);
 
           flake = import (outPath + "/flake.nix");
 

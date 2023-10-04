@@ -149,7 +149,7 @@ let
 
           subdir = if key == lockFile.root then "" else node.locked.dir or "";
 
-          outPath = sourceInfo + ((if subdir == "" then "" else "/") + subdir);
+          outPath = (builtins.storePath sourceInfo) + ((if subdir == "" then "" else "/") + subdir);
 
           flake = import (outPath + "/flake.nix");
 

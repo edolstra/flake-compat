@@ -5,7 +5,7 @@
 # containing 'defaultNix' (to be used in 'default.nix'), 'shellNix'
 # (to be used in 'shell.nix').
 
-{ src, system ? builtins.currentSystem or "unknown-system" }:
+{ src, fetchTarball ? builtins.fetchTarball, system ? builtins.currentSystem or "unknown-system" }:
 
 let
 

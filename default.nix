@@ -109,7 +109,7 @@ let
           # Massage `src` into a store path.
           if builtins.isPath src
           then
-            if dirOf (toString src) == builtins.storeDir
+            if builtins ? currentSystem && dirOf (toString src) == builtins.storeDir
             then
               # If it's already a store path, don't copy it again.
               builtins.storePath src

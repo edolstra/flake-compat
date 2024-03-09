@@ -110,6 +110,8 @@ let
           if builtins.isPath src
           then
             if dirOf (toString src) == builtins.storeDir
+              # `builtins.storePath` is not available in pure-eval mode.
+              && builtins ? currentSystem
             then
               # If it's already a store path, don't copy it again.
               builtins.storePath src

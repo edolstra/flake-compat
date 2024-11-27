@@ -229,6 +229,8 @@ let
 
 in
   rec {
+    outputs = result;
+
     defaultNix =
       (builtins.removeAttrs result ["__functor"])
       // (if result ? defaultPackage.${system} then { default = result.defaultPackage.${system}; } else {})

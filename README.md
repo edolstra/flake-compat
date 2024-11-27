@@ -27,3 +27,9 @@ Afterwards, create a `default.nix` file containing the following:
 ```
 
 If you would like a `shell.nix` file, create one containing the above, replacing `defaultNix` with `shellNix`.
+
+You can access any flake output via the `outputs` attribute returned by `flake-compat`, e.g.
+
+```nix
+(import ... { src = ./.; }).outputs.packages.x86_64-linux.default
+```

@@ -38,6 +38,7 @@ let
         lastModified = info.lastModified;
         lastModifiedDate = formatSecondsSinceEpoch info.lastModified;
         narHash = info.narHash;
+        revCount = info.revCount or 0;
       } // (if info ? rev then {
         rev = info.rev;
         shortRev = builtins.substring 0 7 info.rev;

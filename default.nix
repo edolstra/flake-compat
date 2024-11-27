@@ -13,7 +13,7 @@ let
 
   lockFile = builtins.fromJSON (builtins.readFile lockFilePath);
 
-  fetchTree =
+  fetchTree = builtins.fetchTree or (
     info:
     if info.type == "github" then
       { outPath =
@@ -74,7 +74,7 @@ let
       }
     else
       # FIXME: add Mercurial, tarball inputs.
-      throw "flake input has unsupported input type '${info.type}'";
+      throw "flake input has unsupported input type '${info.type}'");
 
   callFlake4 = flakeSrc: locks:
     let

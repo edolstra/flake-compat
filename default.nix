@@ -45,7 +45,7 @@ let
       } else {
       })
     else if info.type == "path" then
-      { outPath = builtins.path { path = info.path; };
+      { outPath = builtins.path { path = info.path; sha256 = info.narHash; };
         narHash = info.narHash;
       }
     else if info.type == "tarball" then

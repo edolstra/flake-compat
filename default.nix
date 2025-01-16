@@ -199,9 +199,16 @@ let
   allNodes = builtins.mapAttrs (
     key: node:
     let
+      parentNode = allNodes.${getInputByPath lockFile.root node.parent};
+
       sourceInfo =
         if key == lockFile.root then
           rootSrc
+        else if node.locked.type == "path" && builtins.substring 0 1 node.locked.path != "/" then
+          parentNode.sourceInfo
+          // {
+            outPath = parentNode.outPath + ("/" + node.locked.path);
+          }
         else
           fetchTree (node.info or { } // removeAttrs node.locked [ "dir" ]);
 

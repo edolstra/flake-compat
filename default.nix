@@ -11,6 +11,7 @@
 }:
 
 let
+  inherit (builtins) mapAttrs;
 
   lockFilePath = src + "/flake.lock";
 
@@ -103,7 +104,7 @@ let
     let
       flake = import (flakeSrc + "/flake.nix");
 
-      inputs = builtins.mapAttrs (
+      inputs = mapAttrs (
         n: v:
         if v.flake or true then
           callFlake4 (fetchTree (v.locked // v.info)) v.inputs
@@ -196,7 +197,7 @@ let
     in
     "${toString y'}${pad (toString m)}${pad (toString d)}${pad (toString hours)}${pad (toString minutes)}${pad (toString seconds)}";
 
-  allNodes = builtins.mapAttrs (
+  allNodes = mapAttrs (
     key: node:
     let
       parentNode = allNodes.${getInputByPath lockFile.root node.parent};
@@ -218,9 +219,7 @@ let
 
       flake = import (outPath + "/flake.nix");
 
-      inputs = builtins.mapAttrs (inputName: inputSpec: allNodes.${resolveInput inputSpec}) (
-        node.inputs or { }
-      );
+      inputs = mapAttrs (inputName: inputSpec: allNodes.${resolveInput inputSpec}) (node.inputs or { });
 
       # Resolve a input spec into a node name. An input spec is
       # either a node name, or a 'follows' path from the root

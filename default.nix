@@ -208,7 +208,7 @@ let
         else if node.locked.type == "path" && builtins.substring 0 1 node.locked.path != "/" then
           parentNode.sourceInfo
           // {
-            outPath = parentNode.outPath + ("/" + node.locked.path);
+            outPath = parentNode.result.outPath + ("/" + node.locked.path);
           }
         else
           fetchTree (node.info or { } // removeAttrs node.locked [ "dir" ]);
@@ -219,7 +219,9 @@ let
 
       flake = import (outPath + "/flake.nix");
 
-      inputs = mapAttrs (inputName: inputSpec: allNodes.${resolveInput inputSpec}) (node.inputs or { });
+      inputs = mapAttrs (inputName: inputSpec: allNodes.${resolveInput inputSpec}.result) (
+        node.inputs or { }
+      );
 
       # Resolve a input spec into a node name. An input spec is
       # either a node name, or a 'follows' path from the root
@@ -260,11 +262,14 @@ let
         };
 
     in
-    if node.flake or true then
-      assert builtins.isFunction flake.outputs;
-      result
-    else
-      sourceInfo
+    {
+      result =
+        if node.flake or true then
+          assert builtins.isFunction flake.outputs;
+          result
+        else
+          sourceInfo;
+    }
   ) lockFile.nodes;
 
   result =
@@ -273,7 +278,7 @@ let
     else if lockFile.version == 4 then
       callFlake4 rootSrc (lockFile.inputs)
     else if lockFile.version >= 5 && lockFile.version <= 7 then
-      allNodes.${lockFile.root}
+      allNodes.${lockFile.root}.result
     else
       throw "lock file '${lockFilePath}' has unsupported version ${toString lockFile.version}";
 

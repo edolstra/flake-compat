@@ -200,29 +200,25 @@ let
   allNodes = mapAttrs (
     key: node:
     let
-      parentNode = allNodes.${getInputByPath lockFile.root node.parent};
+      isRelative = node.locked.type or null == "path" && builtins.substring 0 1 node.locked.path != "/";
 
-      flakeDir =
-        let
-          dir = node.locked.path or "";
-          parentDir = parentNode.flakeDir;
-        in
-        if node ? parent then parentDir + ("/" + dir) else dir;
+      parentNode = allNodes.${getInputByPath lockFile.root node.parent};
 
       sourceInfo =
         if key == lockFile.root then
           rootSrc
-        else if node.locked.type == "path" && builtins.substring 0 1 node.locked.path != "/" then
+        else if isRelative then
           parentNode.sourceInfo
-          // {
-            outPath = parentNode.sourceInfo.outPath + ("/" + flakeDir);
-          }
         else
           fetchTree (node.info or { } // removeAttrs node.locked [ "dir" ]);
 
       subdir = if key == lockFile.root then "" else node.locked.dir or "";
 
-      outPath = sourceInfo + ((if subdir == "" then "" else "/") + subdir);
+      outPath =
+        if isRelative then
+          parentNode.outPath + (if node.locked.path == "" then "" else "/" + node.locked.path)
+        else
+          sourceInfo.outPath + (if subdir == "" then "" else "/" + subdir);
 
       flake = import (outPath + "/flake.nix");
 
@@ -275,9 +271,9 @@ let
           assert builtins.isFunction flake.outputs;
           result
         else
-          sourceInfo;
+          sourceInfo // { inherit sourceInfo outPath; };
 
-      inherit flakeDir sourceInfo;
+      inherit outPath sourceInfo;
     }
   ) lockFile.nodes;
 

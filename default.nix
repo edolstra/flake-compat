@@ -11,6 +11,7 @@
 }:
 
 let
+  inherit (builtins) mapAttrs;
 
   lockFilePath = src + "/flake.lock";
 
@@ -103,7 +104,7 @@ let
     let
       flake = import (flakeSrc + "/flake.nix");
 
-      inputs = builtins.mapAttrs (
+      inputs = mapAttrs (
         n: v:
         if v.flake or true then
           callFlake4 (fetchTree (v.locked // v.info)) v.inputs
@@ -196,22 +197,32 @@ let
     in
     "${toString y'}${pad (toString m)}${pad (toString d)}${pad (toString hours)}${pad (toString minutes)}${pad (toString seconds)}";
 
-  allNodes = builtins.mapAttrs (
+  allNodes = mapAttrs (
     key: node:
     let
+      isRelative = node.locked.type or null == "path" && builtins.substring 0 1 node.locked.path != "/";
+
+      parentNode = allNodes.${getInputByPath lockFile.root node.parent};
+
       sourceInfo =
         if key == lockFile.root then
           rootSrc
+        else if isRelative then
+          parentNode.sourceInfo
         else
           fetchTree (node.info or { } // removeAttrs node.locked [ "dir" ]);
 
       subdir = if key == lockFile.root then "" else node.locked.dir or "";
 
-      outPath = sourceInfo + ((if subdir == "" then "" else "/") + subdir);
+      outPath =
+        if isRelative then
+          parentNode.outPath + (if node.locked.path == "" then "" else "/" + node.locked.path)
+        else
+          sourceInfo.outPath + (if subdir == "" then "" else "/" + subdir);
 
       flake = import (outPath + "/flake.nix");
 
-      inputs = builtins.mapAttrs (inputName: inputSpec: allNodes.${resolveInput inputSpec}) (
+      inputs = mapAttrs (inputName: inputSpec: allNodes.${resolveInput inputSpec}.result) (
         node.inputs or { }
       );
 
@@ -254,11 +265,16 @@ let
         };
 
     in
-    if node.flake or true then
-      assert builtins.isFunction flake.outputs;
-      result
-    else
-      sourceInfo
+    {
+      result =
+        if node.flake or true then
+          assert builtins.isFunction flake.outputs;
+          result
+        else
+          sourceInfo // { inherit sourceInfo outPath; };
+
+      inherit outPath sourceInfo;
+    }
   ) lockFile.nodes;
 
   result =
@@ -267,7 +283,7 @@ let
     else if lockFile.version == 4 then
       callFlake4 rootSrc (lockFile.inputs)
     else if lockFile.version >= 5 && lockFile.version <= 7 then
-      allNodes.${lockFile.root}
+      allNodes.${lockFile.root}.result
     else
       throw "lock file '${lockFilePath}' has unsupported version ${toString lockFile.version}";
 
